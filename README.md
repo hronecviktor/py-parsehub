@@ -92,7 +92,7 @@ Both runs and projects can have their attributes easily printed printed for debu
     end_time : 2015-04-13T15:30:10
     md5sum : 51b246040a0ee389dd5eb6bb46e1b06b
     pages : 1
-    ph : <ParseHub object API key:'tDYy17aCebNjQ47QM7J4aSku3SGthPGh'>
+    ph : <ParseHub object API key:'<redacted>'>
     project_token : tCWOS3cB-ZM8qtShXw6j8tyOHZ84hLik
     run_token : tCNPbuLm7wd-Aqmb9WHHZMV0
     start_time : 2015-04-13T15:30:03
