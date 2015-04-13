@@ -2,7 +2,8 @@ import json
 from time import sleep
 
 import urllib3
-
+# TODO: Enable SSL
+urllib3.disable_warnings()
 
 class DataNotReady(Exception):
     pass
@@ -121,6 +122,7 @@ class PhProject(object):
         jdata = json.loads(data)['run_list']
         return [PhRun(self.ph, rundata) for rundata in jdata]
 
+    def run(self, args: dict={}):
         """
         Start a new run from a given project
 
@@ -140,8 +142,6 @@ class PhProject(object):
             'POST', self.ph.URLS['startrun'].format(self.token), params)
         data = resp.data.decode('utf-8')
         jdata = json.loads(data)
-        # TODO: Remove
-        print("RUNNING: ", jdata)
         return PhRun(self.ph, jdata)
 
     def delete_runs(self):
@@ -206,7 +206,7 @@ class PhRun(object):
 
     def get_data(self, out_format: str='json'):
         """
-        Get results for a given run. If the results were fetched before, returns it, otherwise fetch them.
+        Get results for a given run. If the results were fetched before, returns it, otherwise fetch them from server.
         Throws DataNotReady exception if its not available
         :param out_format: 'json' or 'csv', csv not implemented yet
         :return: The fetched data
@@ -294,8 +294,3 @@ class PhRun(object):
         if not isinstance(other, PhRun):
             raise TypeError("Cant compare PhRun to {}".format(type(other)))
         return self.md5sum == other.md5sum
-
-
-if __name__ == '__main__':
-    # TODO: Enable SSL
-
