@@ -4,7 +4,7 @@ from io import BytesIO
 import json
 
 # Proxy
-http = urllib3.proxy_from_url('http://10.215.128.5:8080')
+http = urllib3.proxy_from_url('http://websense.usk.egit.sk:3128')
 # For unproxied connection
 # http = urllib3.PoolManager()
 
@@ -19,7 +19,7 @@ http = urllib3.proxy_from_url('http://10.215.128.5:8080')
 ### GET RESULTS BY run_token
 ###
 r = http.request('GET','https://www.parsehub.com/api/scrapejob/dl', {'api_key':'tDYy17aCebNjQ47QM7J4aSku3SGthPGh',
-                                                                     'run_token':'tEgOgLwuAR2cKPnImZlQdYMe-kpLxIuO'})
+                                                                     'run_token':'tmAF7lirdViTxuhroK8w4FP4UE82H8S4'})
 myzip = zipfile.ZipFile(BytesIO(r.data))
 
 print('Status: {}'.format(r.status))
@@ -28,4 +28,5 @@ for info in myzip.infolist():
     print('Filename: {}'.format(info.filename))
     for line in myzip.open(info.filename).readlines():
         print(line.decode('utf-8'))
+        print(json.dumps(line,indent=2,separators=(',', ': ')))
 

@@ -70,7 +70,7 @@ class phProject(object):
             resp = self.ph.conn.request('POST', self.ph.urls['delete'], dict(api_key=self.ph.api_key, token=self.token))
             return resp.data.decode('utf-8')
 
-        def run(self, start_url=None, start_value_override=None, block: bool = False):
+        def run(self, start_url=None, start_value_override=None):
             options = {}
             if start_url:
                 options['start_url'] = start_url
@@ -80,11 +80,6 @@ class phProject(object):
             jdata = json.loads(resp.data.decode('utf-8'))
             print("=============IN RUN: ", dict(jdata,status='NOTSTARTED'))
             newrun = phRun(self.ph, dict(jdata))
-            if block:
-                while True:
-                    newrun.refresh(block=True)
-                    if newrun.status == 'complete':
-                        break
             self.last_run = newrun
             return newrun
 
@@ -99,23 +94,17 @@ class phRun(object):
         return 'phRun<token:{}>'.format(self.run_token)
 
     def refresh(self, block:bool=False):
+        resp = self.ph.conn.request('GET', self.ph.urls['run_status'], dict(api_key=self.ph.api_key, run_token=self.run_token))
+        data = resp.data.decode('utf-8')
+        # print(data)
         while True:
-            # Break if job is already complete
-            if self.status == 'complete':
-                return self.status
-            # Get new data for the job
-            resp = self.ph.conn.request('GET', self.ph.urls['run_status'], dict(api_key=self.ph.api_key, run_token=self.run_token))
-            data = resp.data.decode('utf-8')
             jdata = json.loads(data)
             print('[JDATA]:',jdata)
-            # If status changed
             if jdata['status'] != self.status:
                 print('==============STATUS CHANGED, UPDATING ALL====================')
-                # Refresh the attributes with new data
                 for key in jdata.keys():
                     setattr(self, key, jdata[key])
                 return self.status
-            # Status did not change and blocking is on
             elif block:
                 print('NOT CHANGED, SLEEPING 250ms')
                 sleep(250/1000)
@@ -136,11 +125,9 @@ if lastjob.status == PyrseHub.COMPLETE:
 gpro.getruns()
 allruns = gpro.runs
 print(len(allruns), allruns)
-print('RUNNING THE JOB')
-run = gpro.run(block=True)
-# print('RUN COMPLETE')
+run = gpro.run()
 print('=============RUN', run)
-run.refresh()
+run.refresh(block=True)
 print('=============AFTER REFRESH', run.status)
 gpro.getruns()
 allruns = gpro.runs
