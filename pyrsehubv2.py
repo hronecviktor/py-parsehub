@@ -11,7 +11,7 @@ class PyrseHub(object):
     ERROR = 'error'
     def __init__(self, api_key: str, proxy: str=None, include_last_run: int=1):
         self.api_key = api_key
-        self.urls = urls = dict(projects='https://www.parsehub.com/api/scrapejob',
+        self.urls = urls = dict(projects='https://www.parsehub.com/api/v2/projects',
                                 delete='https://www.parsehub.com/api/scrapejob/delete',
                                 run='https://www.parsehub.com/api/scrapejob/run',
                                 run_status='https://www.parsehub.com/api/scrapejob/run_status',
@@ -25,20 +25,21 @@ class PyrseHub(object):
         self.projects = {project.title: project for project in self.getprojects(include_last_run)}
 
     def getprojects(self, include_last_run: int):
-        resp = self.conn.request('GET', self.urls['projects'], dict(include_last_run=include_last_run, api_key=self.api_key))
+        resp = self.conn.request('GET', self.urls['projects'], dict(api_key=self.api_key))
         # print(resp.status)
         data = resp.data.decode('utf-8')
 
-        # print(data)
-        jdata = json.loads(data)['scrapejobs']
-        #Convert nested JSON documents
-        for project_index in range(len(jdata)):
-            for field in ('options_json','templates_json'):
-                jdata[project_index][field] = json.loads(jdata[project_index][field])
+        print(data)
+        jdata = json.loads(data)['projects']
+        print(json.dumps(jdata, sort_keys=True, indent=2, separators=(',', ' : ')))
+        # #Convert nested JSON documents
+        # for project_index in range(len(jdata)):
+        #     for field in ('options_json','templates_json'):
+        #         jdata[project_index][field] = json.loads(jdata[project_index][field])
         # print(json.dumps(jdata, sort_keys=True, indent=2, separators=(',', ' : ')))
-
-        #Pass project details dictionaries to constructors, return array
-        return [phProject(self, project) for project in jdata]
+        #
+        # # Pass project details dictionaries to constructors, return array
+        # return [phProject(self, project) for project in jdata]
 
 
 class phProject(object):
