@@ -1,6 +1,11 @@
 import json
+from time import sleep
 
 import urllib3
+
+
+class DataNotReady(Exception):
+    pass
 
 
 class ParseHub(object):
@@ -41,6 +46,14 @@ class ParseHub(object):
         # Pass project details dictionaries to constructors, return array
         return [PhProject(self, project) for project in jdata]
 
+    @staticmethod
+    def pprint(obj):
+        for argname in sorted([x for x in dir(obj) if not x.startswith('__')]):
+            # Skip callables
+            if hasattr(getattr(obj, argname), '__call__'):
+                continue
+            print("{} : {}".format(argname, getattr(obj, argname)))
+
 
 class PhProject(object):
     def __init__(self, ph, arg_dict: dict):
@@ -66,19 +79,29 @@ class PhProject(object):
         jdata = json.loads(data)['run_list']
         return [PhRun(self.ph, rundata) for rundata in jdata]
 
+    def run(self, args: dict={}):
+        params = dict(api_key=self.ph.api_key)
+        if args:
+            params.update(args)
+        resp = self.ph.conn.request(
+            'POST', self.ph.URLS['startrun'].format(self.token), params)
+        data = resp.data.decode('utf-8')
+        jdata = json.loads(data)
+        # TODO: Remove
+        print("RUNNING: ", jdata)
+        return PhRun(self.ph, jdata)
+
     def __repr__(self):
         return '<PhProject \'{}\' token \'{}\'>'.format(self.title, self.token)
 
     def pprint(self):
-        for argname in sorted([x for x in dir(self) if not x.startswith('__')]):
-            if argname == 'pprint':
-                continue
-            print("{} : {}".format(argname, getattr(self, argname)))
+        ParseHub.pprint(self)
 
 
 class PhRun(object):
     def __init__(self, ph, arg_dict: dict):
         self.ph = ph
+        self.data = None
         self.data_ready = arg_dict['data_ready']
         self.end_time = arg_dict['end_time']
         self.md5sum = arg_dict['md5sum']
@@ -89,22 +112,56 @@ class PhRun(object):
         self.start_url = arg_dict['start_url']
         self.start_value = arg_dict['start_value']
         self.status = arg_dict['status']
+        # Uncomment to fetch data for each run at initialization
+        # if self.data_ready:
+        #     self.data = self.get_data()
 
     def __repr__(self):
         return '<PhRun object token:{}>'.format(self.run_token)
 
-    def get_data(self,format: str='json'):
+    def get_data(self, out_format: str='json'):
+        if self.data:
+            return self.data
+        self.data_ready = self.check_available()
+        if not self.data_ready:
+            raise DataNotReady("The run {} has not yet finished, data not available yet.".format(self))
         resp = self.ph.conn.request(
-            'GET', self.ph.URLS['getdata'].format(self.run_token), dict(api_key=self.ph.api_key, format=format))
+            'GET', self.ph.URLS['getdata'].format(self.run_token), dict(api_key=self.ph.api_key, format=out_format))
         data = resp.data.decode('utf-8')
         jdata = json.loads(data)['results']
+        self.data = jdata
         return jdata
 
+    def get_data_sync(self, out_format: str='json', chk_interval=0.25, max_chks=65535):
+        if self.data:
+            return self.data
+        check_cnt = 0
+        while True:
+            if check_cnt >= max_chks:
+                break
+            self.data_ready = self.check_available()
+            if self.data_ready:
+                break
+            else:
+                check_cnt += 1
+                sleep(chk_interval)
+        if not self.data_ready:
+            raise DataNotReady("The run {} has not yet finished, data not available yet.".format(self))
+        resp = self.ph.conn.request(
+            'GET', self.ph.URLS['getdata'].format(self.run_token), dict(api_key=self.ph.api_key, format=out_format))
+        data = resp.data.decode('utf-8')
+        jdata = json.loads(data)['results']
+        self.data = jdata
+        return jdata
+
+    def check_available(self):
+        resp = self.ph.conn.request(
+            'GET', self.ph.URLS['project'].format(self.project_token), dict(api_key=self.ph.api_key))
+        data = resp.data.decode('utf-8')
+        return json.loads(data)['last_run']['data_ready']
+
     def pprint(self):
-        for argname in sorted([x for x in dir(self) if not x.startswith('__')]):
-            if argname == 'pprint':
-                continue
-            print("{} : {}".format(argname, getattr(self, argname)))
+        ParseHub.pprint(self)
 
     def __eq__(self, other):
         if not isinstance(other, PhRun):
@@ -129,3 +186,13 @@ if __name__ == '__main__':
         print("LAST READY: {}".format(p.last_ready_run))
         if p.last_ready_run:
             p.last_ready_run.pprint()
+    newrun = parseh.projects[0].run()
+    newrun.pprint()
+    for _ in range(15):
+        try:
+            print(newrun.get_data_sync())
+            break
+        except DataNotReady as E:
+            print("waiting")
+            sleep(1)
+    print(newrun.get_data())
