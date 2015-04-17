@@ -58,6 +58,12 @@ class ParseHub(object):
         # Pass project details dictionaries to constructors, return array
         return [PhProject(self, project) for project in jdata]
 
+    def project_from_token(self, token):
+        resp = self.conn.request('GET', self.URLS['project'].format(token), dict(api_key=self.api_key))
+        data = resp.data.decode('utf-8')
+        jdata = json.loads(data)
+        return PhProject(self, jdata)
+
     @staticmethod
     def pprint(obj):
         """
