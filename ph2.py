@@ -267,7 +267,7 @@ class PhRun(object):
         resp = self.ph.conn.request(
             'GET', self.ph.URLS['project'].format(self.project_token), dict(api_key=self.ph.api_key))
         data = resp.data.decode('utf-8')
-        return json.loads(data)['last_run']['data_ready']
+        return [x for x in json.loads(data)['run_list'] if x['run_token'] == self.run_token][0]['data_ready']
 
     def cancel(self):
         """
