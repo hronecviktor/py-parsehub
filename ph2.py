@@ -225,9 +225,8 @@ class PhRun(object):
         resp = self.ph.conn.request(
             'GET', self.ph.URLS['getdata'].format(self.run_token), dict(api_key=self.ph.api_key, format=out_format))
         data = resp.data.decode('utf-8')
-        jdata = json.loads(data)['results']
-        self.data = jdata
-        return jdata
+        self.data = self.parse_json_data(data)
+        return self.data
 
     def get_data_sync(self, out_format: str='json', chk_interval=0.25, max_chks=65535):
         """
@@ -255,9 +254,8 @@ class PhRun(object):
         resp = self.ph.conn.request(
             'GET', self.ph.URLS['getdata'].format(self.run_token), dict(api_key=self.ph.api_key, format=out_format))
         data = resp.data.decode('utf-8')
-        jdata = json.loads(data)['results']
-        self.data = jdata
-        return jdata
+        self.data = self.parse_json_data(data)
+        return self.data
 
     def check_available(self):
         """
@@ -288,6 +286,12 @@ class PhRun(object):
             'DELETE', self.ph.URLS['deleterun'].format(self.run_token), dict(api_key=self.ph.api_key))
         data = resp.data.decode('utf-8')
         return json.loads(data)['run_token']
+
+    def parse_json_data(self, data):
+        jdata = json.loads(data)
+        if "results" in jdata:
+            jdata = jdata["results"]
+        return jdata
 
     def pprint(self):
         """
